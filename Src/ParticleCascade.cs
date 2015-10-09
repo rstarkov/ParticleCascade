@@ -15,13 +15,15 @@ namespace ParticleCascade
         private int _particleFree; // hint at a free (non-live) particle location. This index is not necessarily free, but the search for a free location should start here.
         private int _width;
         private int _height;
+        private double _dt;
 
         public int ParticleCount { get { return _particleCount; } }
 
-        private Field(int width, int height)
+        private Field(int width, int height, double dt = 1)
         {
             _width = width;
             _height = height;
+            _dt = dt;
             _pixels = new Pixel[_width * _height];
             _particles = new Particle[1024];
             _particleCount = 0;
@@ -31,7 +33,7 @@ namespace ParticleCascade
 
         public static Field InitBreakout1()
         {
-            var field = new Field(1280, 500);
+            var field = new Field(200, 100, 0.2);
             for (int x = 0; x < field._width; x++)
             {
                 field._pixels[0 * field._width + x].Type = 1;
@@ -42,15 +44,15 @@ namespace ParticleCascade
                 field._pixels[y * field._width + 0].Type = 1;
                 field._pixels[y * field._width + (field._width - 1)].Type = 1;
             }
-            for (int y = 1; y < 150; y++)
+            for (int y = 1; y < 50; y++)
                 for (int x = 1; x < field._width - 1; x++)
                     field._pixels[y * field._width + x].Type = 3;
-            for (int i = 1; i <= 3; i++)
+            for (int i = 1; i <= 1; i++)
             {
             int p = field.addParticle();
-                field._particles[p].X = field._width - 5;
-                field._particles[p].Y = 400;
-                field._particles[p].SetAngleSpeed(4.3, Rnd.NextDouble(0.1, 0.9));
+                field._particles[p].X = field._width / 2;
+                field._particles[p].Y = field._height - 10;
+                field._particles[p].SetAngleSpeed(5.6, Rnd.NextDouble(0.1, 0.9));
             field._particles[p].Color = Color.Lime;
             }
             return field;
@@ -61,8 +63,8 @@ namespace ParticleCascade
             for (int i = 0; i <= _particleLast; i++)
                 if (_particles[i].Live)
                 {
-                    var newX = _particles[i].X + _particles[i].VX;
-                    var newY = _particles[i].Y + _particles[i].VY;
+                    var newX = _particles[i].X + _particles[i].VX * _dt;
+                    var newY = _particles[i].Y + _particles[i].VY * _dt;
                     if (newX < 0 || newY < 0 || newX >= _width || newY >= _height)
                     {
                         deleteParticle(i);
@@ -126,8 +128,8 @@ namespace ParticleCascade
                                 int a = addParticle(); // this new particle may be processed in this Step(), or maybe in the next, depending on where it ends up
                                 _particles[a].X = bounce.Point.X;
                                 _particles[a].Y = bounce.Point.Y;
-                                _particles[a].SetAngleSpeed(new PointD(_particles[i].VX, _particles[i].VY).Theta(), Rnd.NextDouble(0.1, 0.9));
-                                _particles[a].Color = _particles[i].Color;
+                                _particles[a].SetAngleSpeed(bounce.Edge * Math.PI / 2 + Rnd.NextDouble(-1.3, 1.3), Rnd.NextDouble(0.1, 0.9));
+                                _particles[a].Color = rndColor();
                             }
 
                             done: ;
@@ -138,9 +140,37 @@ namespace ParticleCascade
                 }
         }
 
-        private double rndMinMax(double limit1, double limit2)
+        Random rnd2 = new Random();
+        private Color rndColor()
         {
-            return Rnd.NextDouble(Math.Min(limit1, limit2), Math.Max(limit1, limit2));
+            while (true)
+            {
+                int r = rnd2.Next(256);
+                int g = rnd2.Next(256);
+                int b = rnd2.Next(256);
+                int cmax = Math.Max(Math.Max(r, g), b);
+                if (cmax < 230)
+                    continue;
+                int cmin = Math.Min(Math.Min(r, g), b);
+                if ((cmax - cmin) / (double) cmax < 0.7)
+                    continue;
+                if (b > 200 && r < 100 & g < 100)
+                    continue;
+                return Color.FromArgb(r, g, b);
+            }
+        }
+
+        private double rndQuadrant(double angle)
+        {
+            angle = angle % (2 * Math.PI);
+            if (angle < Math.PI / 2)
+                return Rnd.NextDouble(0, Math.PI / 2);
+            else if (angle < Math.PI)
+                return Rnd.NextDouble(Math.PI / 2, Math.PI);
+            else if (angle < 3 * Math.PI / 2)
+                return Rnd.NextDouble(Math.PI, 3 * Math.PI / 2);
+            else
+                return Rnd.NextDouble(3 * Math.PI / 2, 2 * Math.PI);
         }
 
         private struct bounceResult
@@ -199,7 +229,7 @@ namespace ParticleCascade
                         if (_pixels[y * _width + x].IsBreakout)
                             bmp.SetPixel(x, y, Color.Silver);
                         else if (_pixels[y * _width + x].IsBounce)
-                            bmp.SetPixel(x, y, Color.Yellow);
+                            bmp.SetPixel(x, y, Color.DimGray);
                     }
             for (int i = 0; i <= _particleLast; i++)
                 if (_particles[i].Live)
@@ -221,7 +251,7 @@ namespace ParticleCascade
                             if (_pixels[y * _width + x].IsBreakout)
                                 g.FillRectangle(Brushes.Silver, x * zoom, y * zoom, zoom, zoom);
                             else if (_pixels[y * _width + x].IsBounce)
-                                g.FillRectangle(Brushes.Yellow, x * zoom, y * zoom, zoom, zoom);
+                                g.FillRectangle(Brushes.DimGray, x * zoom, y * zoom, zoom, zoom);
                         }
             }
             for (int i = 0; i <= _particleLast; i++)
