@@ -16,6 +16,8 @@ namespace ParticleCascade
         private int _width;
         private int _height;
 
+        public int ParticleCount { get { return _particleCount; } }
+
         private Field(int width, int height)
         {
             _width = width;
@@ -66,52 +68,66 @@ namespace ParticleCascade
                     if ((int) newX != (int) _particles[i].X || (int) newY != (int) _particles[i].Y)
                     {
                         // The particle has moved into another pixel
+                        int oldPxX = (int) _particles[i].X;
+                        int oldPxY = (int) _particles[i].Y;
                         int newPxX = (int) newX;
                         int newPxY = (int) newY;
-                        if (_pixels[newPxY * _width + newPxX].IsBounce)
+                        // Particles move no more than 1 pixel at a time, but it could be diagonal. Check all three possible targets before doing any expensive computation.
+                        if (_pixels[newPxY * _width + newPxX].IsBounce || _pixels[oldPxY * _width + newPxX].IsBounce || _pixels[newPxY * _width + oldPxX].IsBounce)
                         {
                             var particlePath = new EdgeD(_particles[i].X, _particles[i].Y, newX, newY);
-                            EdgeD pixelEdge;
-                            PointD intersection;
-                            int edge;
-                            if (particlePath.IntersectsWith(pixelEdge = new EdgeD(newPxX, newPxY, newPxX, newPxY + 1))) // left edge
+                            var bounce = new bounceResult();
+
+                            if (newPxX > oldPxX) // then check left edge of pixel to the right
+                                if (checkBounce(particlePath, newPxX, oldPxY, 2, ref bounce))
+                                    goto found;
+                            if (newPxX < oldPxX) // then check right edge of pixel to the left
+                                if (checkBounce(particlePath, newPxX, oldPxY, 0, ref bounce))
+                                    goto found;
+                            if (newPxY > oldPxY) // then check top edge of pixel below
+                                if (checkBounce(particlePath, oldPxX, newPxY, 3, ref bounce))
+                                    goto found;
+                            if (newPxY < oldPxY) // then check bottom edge of pixel above
+                                if (checkBounce(particlePath, oldPxX, newPxY, 1, ref bounce))
+                                    goto found;
+
+                            // No collisions found with the pixels sharing an edge with the old location, but check the diagonally adjacent pixel too
+                            if (newPxX != oldPxX && newPxY != oldPxY && _pixels[newPxY * _width + newPxX].IsBounce)
                             {
-                                intersection = Intersect.LineWithLine(particlePath, pixelEdge);
-                                edge = 2;
-                            }
-                            else if (particlePath.IntersectsWith(pixelEdge = new EdgeD(newPxX + 1, newPxY, newPxX + 1, newPxY + 1))) // right edge
-                            {
-                                intersection = Intersect.LineWithLine(particlePath, pixelEdge);
-                                edge = 0;
-                            }
-                            else if (particlePath.IntersectsWith(pixelEdge = new EdgeD(newPxX, newPxY, newPxX + 1, newPxY))) // top edge
-                            {
-                                intersection = Intersect.LineWithLine(particlePath, pixelEdge);
-                                edge = 3;
-                            }
-                            else if (particlePath.IntersectsWith(pixelEdge = new EdgeD(newPxX, newPxY + 1, newPxX + 1, newPxY + 1))) // bottom edge
-                            {
-                                intersection = Intersect.LineWithLine(particlePath, pixelEdge);
-                                edge = 1;
-                            }
-                            else
+                                if (checkBounce(particlePath, newPxX, newPxY, 0, ref bounce))
+                                    goto found;
+                                if (checkBounce(particlePath, newPxX, newPxY, 1, ref bounce))
+                                    goto found;
+                                if (checkBounce(particlePath, newPxX, newPxY, 2, ref bounce))
+                                    goto found;
+                                if (checkBounce(particlePath, newPxX, newPxY, 3, ref bounce))
+                                    goto found;
+                                // The particle has moved into the diagonally adjacent bouncy pixel, so there HAS to be a collision
                                 throw new Exception();
-                            newX = intersection.X;
-                            newY = intersection.Y;
-                            if (edge == 0 || edge == 2)
+                            }
+
+                            goto done; // no collisions found - it's a near miss
+
+                            found: ;
+
+                            newX = bounce.Point.X;
+                            newY = bounce.Point.Y;
+                            if (bounce.Edge == 0 || bounce.Edge == 2)
                                 _particles[i].VX = -_particles[i].VX;
                             else
                                 _particles[i].VY = -_particles[i].VY;
 
-                            if (_pixels[newPxY * _width + newPxX].IsBreakout)
+                            if (_pixels[bounce.PixelY * _width + bounce.PixelX].IsBreakout)
                             {
-                                _pixels[newPxY * _width + newPxX].Type = 0;
+                                _pixels[bounce.PixelY * _width + bounce.PixelX].Type = 0;
                                 int a = addParticle(); // this new particle may be processed in this Step(), or maybe in the next, depending on where it ends up
-                                _particles[a].X = intersection.X;
-                                _particles[a].Y = intersection.Y;
-                                _particles[a].SetAngleSpeed(edge * Math.PI / 2 + Rnd.NextDouble(-1.3, 1.3), Rnd.NextDouble(0.1, 0.9));
+                                _particles[a].X = bounce.Point.X;
+                                _particles[a].Y = bounce.Point.Y;
+                                _particles[a].SetAngleSpeed(bounce.Edge * Math.PI / 2 + Rnd.NextDouble(-1.3, 1.3), Rnd.NextDouble(0.1, 0.9));
                                 _particles[a].Color = _particles[i].Color;
                             }
+
+                            done: ;
                         }
                     }
                     _particles[i].X = newX;
@@ -119,24 +135,96 @@ namespace ParticleCascade
                 }
         }
 
-        public Bitmap Draw()
+        private double rndMinMax(double limit1, double limit2)
         {
-            var result = new Bitmap(_width, _height, PixelFormat.Format24bppRgb);
+            return Rnd.NextDouble(Math.Min(limit1, limit2), Math.Max(limit1, limit2));
+        }
+
+        private struct bounceResult
+        {
+            public PointD Point;
+            public int Edge;
+            public int PixelX, PixelY;
+        }
+
+        private bool checkBounce(EdgeD particlePath, int pixelX, int pixelY, int pixelEdge, ref bounceResult result)
+        {
+            if (!_pixels[pixelY * _width + pixelX].IsBounce)
+                return false;
+            EdgeD edge;
+            switch (pixelEdge)
+            {
+                case 0:
+                    edge = new EdgeD(pixelX + 1, pixelY, pixelX + 1, pixelY + 1); // right edge
+                    break;
+                case 1:
+                    edge = new EdgeD(pixelX, pixelY + 1, pixelX + 1, pixelY + 1); // bottom edge
+                    break;
+                case 2:
+                    edge = new EdgeD(pixelX, pixelY, pixelX, pixelY + 1); // left edge
+                    break;
+                case 3:
+                    edge = new EdgeD(pixelX, pixelY, pixelX + 1, pixelY); // top edge
+                    break;
+                default:
+                    throw new Exception();
+            }
+            if (!particlePath.IntersectsWith(edge))
+                return false;
+            result.Point = Intersect.LineWithLine(particlePath, edge);
+            result.Edge = pixelEdge;
+            result.PixelX = pixelX;
+            result.PixelY = pixelY;
+            // Ensure that the particle isn't considered to be inside the pixel it bounced off
+            if (pixelEdge == 2)
+                result.Point.X -= 0.001;
+            else if (pixelEdge == 3)
+                result.Point.Y -= 0.001;
+            return true;
+        }
+
+        public Bitmap Draw(Bitmap bmp = null)
+        {
+            if (bmp == null)
+                bmp = new Bitmap(_width, _height, PixelFormat.Format24bppRgb);
+            using (var g = Graphics.FromImage(bmp))
+                g.Clear(Color.Black);
             for (int y = 0; y < _height; y++)
                 for (int x = 0; x < _width; x++)
-                {
-                    var px = _pixels[y * _width + x];
-                    var color = Color.Black;
-                    if (px.IsBounce)
-                        color = Color.Yellow;
-                    if (px.IsBreakout)
-                        color = Color.Silver;
-                    result.SetPixel(x, y, color);
-                }
+                    if (_pixels[y * _width + x].Type != 0)
+                    {
+                        if (_pixels[y * _width + x].IsBreakout)
+                            bmp.SetPixel(x, y, Color.Silver);
+                        else if (_pixels[y * _width + x].IsBounce)
+                            bmp.SetPixel(x, y, Color.Yellow);
+                    }
             for (int i = 0; i <= _particleLast; i++)
                 if (_particles[i].Live)
-                    result.SetPixel((int) _particles[i].X, (int) _particles[i].Y, _particles[i].Color);
-            return result;
+                    bmp.SetPixel((int) _particles[i].X, (int) _particles[i].Y, _particles[i].Color);
+            return bmp;
+        }
+
+        public Bitmap DrawZoomed(int zoom, Bitmap bmp = null)
+        {
+            if (bmp == null)
+                bmp = new Bitmap(_width * zoom, _height * zoom, PixelFormat.Format24bppRgb);
+            using (var g = Graphics.FromImage(bmp))
+            {
+                g.Clear(Color.Black);
+                for (int y = 0; y < _height; y++)
+                    for (int x = 0; x < _width; x++)
+                        if (_pixels[y * _width + x].Type != 0)
+                        {
+                            if (_pixels[y * _width + x].IsBreakout)
+                                g.FillRectangle(Brushes.Silver, x * zoom, y * zoom, zoom, zoom);
+                            else if (_pixels[y * _width + x].IsBounce)
+                                g.FillRectangle(Brushes.Yellow, x * zoom, y * zoom, zoom, zoom);
+                        }
+            }
+            for (int i = 0; i <= _particleLast; i++)
+                if (_particles[i].Live)
+                    bmp.SetPixel((int) (_particles[i].X * zoom), (int) (_particles[i].Y * zoom), _particles[i].Color);
+            return bmp;
         }
 
         private void deleteParticle(int index)
