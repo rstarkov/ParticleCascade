@@ -1,5 +1,8 @@
-﻿using System.Windows.Forms;
+﻿using System.Drawing;
+using System.Drawing.Imaging;
+using System.Windows.Forms;
 using RT.Util;
+using RT.Util.ExtensionMethods;
 
 namespace ParticleCascade
 {
@@ -13,14 +16,16 @@ namespace ParticleCascade
             InitializeComponent();
             Rnd.Reset(7923);
             _field = Field.InitBreakout1();
+            for (int i = 0; i < 3000; i++)
+                _field.Step();
         }
 
         private void timer_Tick(object sender, System.EventArgs e)
         {
             for (int i = 0; i < 3; i++)
                 _field.Step();
-            var bmp = _field.Draw();
-            //bmp.Save(@"C:\Temp\ParticleCascade\1\{0:00000}.png".Fmt(_frame++), ImageFormat.Png);
+            var bmp = _field.Draw(picture.Image as Bitmap);
+            //bmp.Save(@"C:\Temp\ParticleCascade\4\{0:00000}.png".Fmt(_frame++), ImageFormat.Png);
             picture.Image = bmp;
         }
     }
