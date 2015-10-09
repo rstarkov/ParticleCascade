@@ -33,7 +33,7 @@ namespace ParticleCascade
 
         public static Field InitBreakout1()
         {
-            var field = new Field(200, 100, 0.2);
+            var field = new Field(640, 480, 1);
             for (int x = 0; x < field._width; x++)
             {
                 field._pixels[0 * field._width + x].Type = 1;
@@ -44,16 +44,16 @@ namespace ParticleCascade
                 field._pixels[y * field._width + 0].Type = 1;
                 field._pixels[y * field._width + (field._width - 1)].Type = 1;
             }
-            for (int y = 1; y < 50; y++)
+            for (int y = 1; y < 350; y++)
                 for (int x = 1; x < field._width - 1; x++)
                     field._pixels[y * field._width + x].Type = 3;
             for (int i = 1; i <= 1; i++)
             {
-            int p = field.addParticle();
+                int p = field.addParticle();
                 field._particles[p].X = field._width / 2;
                 field._particles[p].Y = field._height - 10;
                 field._particles[p].SetAngleSpeed(5.6, Rnd.NextDouble(0.1, 0.9));
-            field._particles[p].Color = Color.Lime;
+                field._particles[p].Color = Color.Lime;
             }
             return field;
         }
@@ -128,7 +128,7 @@ namespace ParticleCascade
                                 int a = addParticle(); // this new particle may be processed in this Step(), or maybe in the next, depending on where it ends up
                                 _particles[a].X = bounce.Point.X;
                                 _particles[a].Y = bounce.Point.Y;
-                                _particles[a].SetAngleSpeed(bounce.Edge * Math.PI / 2 + Rnd.NextDouble(-1.3, 1.3), Rnd.NextDouble(0.1, 0.9));
+                                _particles[a].SetAngleSpeed(rndQuadrant(new PointD(_particles[i].VX, _particles[i].VY).Theta()), Rnd.NextDouble(0.1, 0.9));
                                 _particles[a].Color = rndColor();
                             }
 
