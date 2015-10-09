@@ -33,7 +33,7 @@ namespace ParticleCascade
 
         public static Field InitBreakout1()
         {
-            var field = new Field(640, 480, 1);
+            var field = new Field(650, 1000, 1);
             for (int x = 0; x < field._width; x++)
             {
                 field._pixels[0 * field._width + x].Type = 1;
@@ -44,7 +44,7 @@ namespace ParticleCascade
                 field._pixels[y * field._width + 0].Type = 1;
                 field._pixels[y * field._width + (field._width - 1)].Type = 1;
             }
-            for (int y = 1; y < 350; y++)
+            for (int y = 1; y < field._height - 200; y++)
                 for (int x = 1; x < field._width - 1; x++)
                     field._pixels[y * field._width + x].Type = 3;
             for (int i = 1; i <= 1; i++)
@@ -126,10 +126,10 @@ namespace ParticleCascade
                             {
                                 _pixels[bounce.PixelY * _width + bounce.PixelX].Type = 0;
                                 int a = addParticle(); // this new particle may be processed in this Step(), or maybe in the next, depending on where it ends up
-                                _particles[a].X = bounce.Point.X;
-                                _particles[a].Y = bounce.Point.Y;
-                                _particles[a].SetAngleSpeed(rndQuadrant(new PointD(_particles[i].VX, _particles[i].VY).Theta()), Rnd.NextDouble(0.1, 0.9));
-                                _particles[a].Color = rndColor();
+                                _particles[a].X = _width / 2;
+                                _particles[a].Y = _height - 10;
+                                _particles[a].SetAngleSpeed(Rnd.NextDouble(Math.PI + 1.3, 2 * Math.PI - 1.3), Rnd.NextDouble(0.1, 0.9));
+                                _particles[a].Color = _particles[i].Color;
                             }
 
                             done: ;
