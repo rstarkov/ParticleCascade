@@ -23,7 +23,7 @@ namespace ParticleCascade
                 _field.Step();
             //var bmp = _field.DrawZoomed(10, picture.Image as Bitmap);
             var bmp = _field.Draw(picture.Image as Bitmap);
-            //bmp.Save(@"C:\Temp\ParticleCascade\8\{0:00000}.png".Fmt(_frame++), ImageFormat.Png);
+            //bmp.Save(@"C:\Temp\ParticleCascade\9\{0:00000}.png".Fmt(_frame++), ImageFormat.Png);
             picture.Image = bmp;
         }
     }

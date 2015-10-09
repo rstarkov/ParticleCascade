@@ -17,7 +17,6 @@ namespace ParticleCascade
         private int _height;
         private double _dt;
         private double _time;
-        private int _canCreate = 0;
 
         public int ParticleCount { get { return _particleCount; } }
 
@@ -126,7 +125,10 @@ namespace ParticleCascade
                             if (_pixels[bounce.PixelY * _width + bounce.PixelX].IsBreakout)
                             {
                                 _pixels[bounce.PixelY * _width + bounce.PixelX].Type = 0;
-                                _canCreate++;
+                                int a = addParticle();
+                                _particles[a].X = bounce.Point.X;
+                                _particles[a].Y = bounce.Point.Y;
+                                _particles[a].SetAngleSpeed(rndQuadrant(new PointD(_particles[i].VX, _particles[i].VY).Theta()), Rnd.NextDouble(0.8, 0.9));
                                 _particles[i].Bounces++;
                                 if (_particles[i].Bounces >= 3)
                                     deleteParticle(i);
@@ -139,17 +141,14 @@ namespace ParticleCascade
                     _particles[i].Y = newY;
                 }
 
-            if (_time % 300 < 50)
+            if (_time % 300 < 10)
             {
-                int quota = (int) (_canCreate / ((50 - _time % 300) / _dt));
-                int toCreate = quota + Rnd.Next(-quota / 10, quota / 10);
-                for (int i = 0; i < toCreate && _canCreate > 0; i++)
+                for (int i = 0; i < Math.Max(1, _particleCount / 10 / 10); i++)
                 {
                     int a = addParticle();
                     _particles[a].X = _width / 4 + Rnd.NextDouble(-5, 5);
                     _particles[a].Y = _height - 1;
                     _particles[a].SetAngleSpeed(Math.PI + 1.9 + Rnd.NextDouble(-0.05, 0.05), Rnd.NextDouble(0.8, 0.9));
-                    _canCreate--;
                 }
             }
         }
