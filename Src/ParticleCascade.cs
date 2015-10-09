@@ -45,11 +45,14 @@ namespace ParticleCascade
             for (int y = 1; y < 150; y++)
                 for (int x = 1; x < field._width - 1; x++)
                     field._pixels[y * field._width + x].Type = 3;
+            for (int i = 1; i <= 3; i++)
+            {
             int p = field.addParticle();
-            field._particles[p].X = field._width / 2;
-            field._particles[p].Y = 410; //field.Height / 2;
-            field._particles[p].SetAngleSpeed(Rnd.NextDouble(Math.PI + 1, 2 * Math.PI - 1), Rnd.NextDouble(0.1, 0.9));
+                field._particles[p].X = field._width - 5;
+                field._particles[p].Y = 400;
+                field._particles[p].SetAngleSpeed(4.3, Rnd.NextDouble(0.1, 0.9));
             field._particles[p].Color = Color.Lime;
+            }
             return field;
         }
 
